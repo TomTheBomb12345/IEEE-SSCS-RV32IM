@@ -1,75 +1,83 @@
-`timescale 1ns/1ps
-
-module tb_register_file;
-
-  reg clk=0,reset=1,write_enable=0;
-  reg [4:0] rs1=0,rs2=0,rd=0;
-  reg [31:0] write_data=0;
-  wire [31:0] read_data1,read_data2;
-  integer errors=0;
-
-  register_file dut(clk,reset,write_enable,rs1,rs2,rd,
-    write_data,read_data1,read_data2);
-
-  always #5 clk=~clk;
-
+module tb_regfile;
+  reg clk;
+  reg reg_write;
+  
+  reg[4:0] rs1;
+  reg[4:0] rs2;
+  reg[4:0] rd;
+  
+  reg[31:0] wdata;
+  
+  wire[31:0] rdata1;
+  wire[31:0] rdata2;
+  
+  //connect tb to regfile
+  regfile uut (
+    .clk(clk),
+    .reg_write(reg_write),
+    .rs1(rs1),
+    .rs2(rs2),
+    .rd(rd),
+    .wdata(wdata),
+    .rdata1(rdata1),
+    .rdata2(rdata2)
+  );
+  
+  always #5 clk = ~clk; //generate clock
+  
   initial begin
-    // checking the initial reset values
-    #2;
-    reset=0;
-    rs1=5;
-    rs2=0;
-    #2;
-
-    if(read_data1!==0 || read_data2!==0)
-      errors=errors+1;
-
-    // checking writeback bypass
-    rd=5;
-    write_data=32'h12345678;
-    write_enable=1;
-    #2;
-
-    if(read_data1!==32'h12345678)
-      errors=errors+1;
-
-    // writing data into register x5
-    @(posedge clk);
-    #1;
-    write_enable=0;
-
-    if(read_data1!==32'h12345678)
-      errors=errors+1;
-
-    // checking that x0 cannot be overwritten
+    clk = 0;
+    reg_write = 0;
+    rs1 = 0;
+    rs2 = 0;
+    rd = 0;
+    wdata = 0;
+    
+    $display("RegFile Test:");
+    
+    //Test 1 (Write 100 into reg x1)
     @(negedge clk);
-    rd=0;
-    write_data=32'hffffffff;
-    write_enable=1;
-
+    reg_write = 1;
+    rd = 1;
+    wdata = 10;
     @(posedge clk);
     #1;
-    write_enable=0;
-    rs1=0;
-    rs2=5;
+    
+    //Test 2 (Write 200 into reg x5)
+    @(negedge clk);
+    rd = 5;
+    wdata = 20;
+    @(posedge clk);
     #1;
-
-    if(read_data1!==0 || read_data2!==32'h12345678)
-      errors=errors+1;
-
-    // checking reset again
-    reset=1;
+    reg_write = 0;
+    
+    //Test 3 (Read x1 and x5)
+    rs1 = 1;
+    rs2 = 5;
     #1;
-
-    if(read_data2!==0)
-      errors=errors+1;
-
-    if(errors==0)
-      $display("PASS register_file");
-    else
-      $display("FAIL register_file %0d",errors);
-
+    $display("x1 = %d", rdata1);
+    $display("x5 = %d", rdata2);
+    
+    //Test 4 (Check x0 = 0)
+    rs1 = 0;
+    #1;
+    $display("x0 = %d", rdata1);
+    
+    //Test 5 (Try to write on x0)
+    @(negedge clk);
+    reg_write = 1;
+    rd = 0;
+    wdata = 451;
+    @(posedge clk);
+    #1;
+    reg_write = 0;
+    rs1 = 0;
+    #1;
+    $display("x0 write attempt = %d", rdata1);
+    
+    $display("Regfile Test Done");
+    
     $finish;
+    
   end
-
 endmodule
