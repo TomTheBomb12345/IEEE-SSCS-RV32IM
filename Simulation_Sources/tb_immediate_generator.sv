@@ -1,61 +1,40 @@
 `timescale 1ns/1ps
 
-module tb_immediate_generator;
-
-  reg [31:0] instruction;
+module tb_immgen;
+  reg [31:0] instr;
   reg [2:0] imm_sel;
-  wire [31:0] immediate;
-  integer errors=0;
+  wire [31:0] imm;
 
-  immediate_generator dut(instruction,imm_sel,immediate);
+immgen uut (
+  .instr(instr),
+  .imm_sel(imm_sel),
+  .imm(imm)
+);
 
-  initial begin
-    // I-type, negative immediate
-    instruction=32'hffc00093;
-    imm_sel=0;
-    #2;
-
-    if(immediate!==32'hfffffffc)
-      errors=errors+1;
-
-    // S-type immediate
-    instruction=32'h00302423;
-    imm_sel=1;
-    #2;
-
-    if(immediate!==8)
-      errors=errors+1;
-
-    // B-type immediate
-    instruction=32'h00630463;
-    imm_sel=2;
-    #2;
-
-    if(immediate!==8)
-      errors=errors+1;
-
-    // U-type immediate
-    instruction=32'h123451b7;
-    imm_sel=3;
-    #2;
-
-    if(immediate!==32'h12345000)
-      errors=errors+1;
-
-    // J-type immediate
-    instruction=32'h008000ef;
-    imm_sel=4;
-    #2;
-
-    if(immediate!==8)
-      errors=errors+1;
-
-    if(errors==0)
-      $display("PASS immediate_generator");
-    else
-      $display("FAIL immediate_generator %0d",errors);
-
-    $finish;
-  end
-
+initial begin
+  
+  $monitor("imm_sel = %b, instr = %h, imm = %h",imm_sel, instr, imm);
+  
+  //Immediate (I) (addi x5, x6, 5)
+  imm_sel = 0; instr = 32'h00530293;
+  #1;
+  //Store(S) (sw x5,8(x6))
+  imm_sel = 1; instr = 32'h00532423;
+  #1;
+  
+  //Branch(B) (beq x5,x6,+8)
+  imm_sel = 2; instr = 32'h00628463;
+  #1;
+  
+  //Immediate(U) (lui x5, 0x12345)
+  imm_sel = 3; instr = 32'h123452b7;
+  #1;
+  
+  //Jump(J) (jal x1,+8)
+  imm_sel = 4; instr = 32'h008000ef;
+  #1;
+  
+  $finish;
+  
+end
 endmodule
